@@ -5,7 +5,8 @@
 * Could have gone for numpy array but it adds a dependency for a small project.
 * I could directly write powers of two, but that's a bit of a waste since we actually
 dont use that information for anything else than display, and I might or might not allow players
-to play with their faces/images instead of numbers.
+to play with their faces/images instead of numbers. Additionally what if we want to be able to go much higher ?
+Like 30 iterations ?
 * We could store None|Null instead of PowerOfTwo(0) since 2**0 == 1
   But it's easy to work with non null values when not needed.
 * Could have gone full OOP and representing cells as objects, but
