@@ -34,10 +34,12 @@ class Cell(Container):
 class BoardApp(App):
     CSS = """
     Screen { align: center middle;}
-    Grid { layout: grid; grid-size: 4 4; height: 95%; padding: 2; }
+    Grid { layout: grid; grid-size: 4 4; height: 95%; padding: 0; }
     Digits { width: 100%; height: 100%;}
     .Cell {
         border: solid black; content-align: center middle;
+        padding: 0;
+        margin: 0;
         width: 100%;
         height: 100%;
     }
@@ -131,6 +133,7 @@ class BoardApp(App):
     def action_restart(self) -> None:
         self.GAME = board.Board()
         self.refresh_board()
+    
 
 
 if __name__ == "__main__":
