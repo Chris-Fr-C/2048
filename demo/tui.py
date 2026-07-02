@@ -7,9 +7,6 @@ from textual.containers import Grid, Container
 from textual.binding import Binding
 
 
-class BoardAppFooter(Placeholder):
-    pass
-
 
 class Cell(Container):
     """Represents a specific cell of the table"""
@@ -44,7 +41,8 @@ class BoardApp(App):
         width: 100%;
         height: 100%;
     }
-
+    Message { width: 100%; height: 100%; align: center middle;}
+ 
     /* Hardcoded values for the colors cause artistiiiiiic */
     .val-0  { background: #eceff1; color: #607d8b; }
     .val-1  { background: #e8f5e9; color: #2e7d32; }
@@ -76,6 +74,11 @@ class BoardApp(App):
         Binding(
             key="right", action="right", key_display="→", description="", show=True
         ),
+        # Also allowing wasd.
+        Binding(key="w", action="up", key_display="w", description="", show=True),
+        Binding(key="s", action="down", key_display="s", description="", show=True),
+        Binding(key="a", action="left", key_display="a", description="", show=True),
+        Binding(key="d", action="right", key_display="d", description="", show=True),
     ]
 
     def show_grid(self) -> ComposeResult:
@@ -84,14 +87,50 @@ class BoardApp(App):
                 yield Cell(col, self.GAME._display_power(col))
 
     def compose(self) -> ComposeResult:
-        with Grid(classes="Board"):
+        self.base_grid = Grid(classes="Board", id="Grid")
+
+        with self.base_grid:
             yield from self.show_grid()
 
         with Container():
             yield Footer()
 
-    def on_mount(self) -> None:
-        pass
+    def refresh_board(self) -> None:
+        grid = self.base_grid
+        state = self.GAME.state
+        grid.query().remove() # Who is here for performances anyway.
+
+        if state == board.GameState.DEFEAT:
+            self.base_grid.remove_class("Board").add_class("Message")
+            self.base_grid.mount(Label("You lost :'( Press r to restart)"))
+            return
+        elif state == board.GameState.VICTORY: 
+            self.base_grid.remove_class("Board").add_class("Message")
+            self.base_grid.mount(Label("You won :D Press r to restart)"))
+            return
+
+        self.base_grid.remove_class("Message").add_class("Board")
+        grid.mount(*self.show_grid())
+
+    def action_left(self) -> None:
+        self.GAME.move_left().fill_new()
+        self.refresh_board()
+
+    def action_right(self) -> None:
+        self.GAME.move_right().fill_new()
+        self.refresh_board()
+
+    def action_up(self) -> None:
+        self.GAME.move_up().fill_new()
+        self.refresh_board()
+
+    def action_down(self) -> None:
+        self.GAME.move_down().fill_new()
+        self.refresh_board()
+
+    def action_restart(self) -> None:
+        self.GAME = board.Board()
+        self.refresh_board()
 
 
 if __name__ == "__main__":

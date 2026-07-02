@@ -53,7 +53,7 @@ class BoardDimensions(NamedTuple):
 
 class BoardConfig(NamedTuple):
     size: BoardDimensions = BoardDimensions(Height(4), Width(4))
-    amount_new_per_tick: int = 3
+    amount_new_per_tick: int = 1
     """This represents how many 2 appear on screen at each tick."""
     amount_initial: int = 4
     """How many two we have in the initial state."""
@@ -367,3 +367,23 @@ class Board:
             return GameState.DEFEAT
 
         return GameState.PLAYING
+
+    def fill_new(self) -> Self:
+        """
+        Adds new numbers on empty spots based on configuration.
+
+        Returns:
+            Fluent setter.
+        """
+        # we find all empty spots first
+        empty : list[CellPosition] = []
+        for row_i, row in enumerate(self.cells):
+            for col_i, col in enumerate(row):
+                if col <= PowerOfTwo(0):
+                    empty.append(CellPosition(row_i, col_i))
+
+        picked = random.choices(empty, k=min(self._cfg.amount_new_per_tick, len(empty)))
+        for pick in picked:
+            self[pick]=PowerOfTwo(1)
+        return self
+
