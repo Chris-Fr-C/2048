@@ -222,6 +222,15 @@ class Board:
         return self
 
     def move(self, direction: Direction) -> Self:
+        """Moves the whole board towards a specific direction.
+
+        Args:
+            direction: Direction of the board. Direction relative to screen, 
+            not to the internal axis.
+        Returns:
+            Fluent setter. In place mutation.
+        """
+
         # We iterate on columns as much as we can.
         # The order in which we iterate is important for
         # the game rules. But we can simplify that by just aligning twice.
@@ -240,6 +249,15 @@ class Board:
 
     def move_down(self) -> Self:
         return self.move(Direction.DOWN)
+
+    def move_up(self) -> Self:
+        return self.move(Direction.UP)
+
+    def move_left(self) -> Self:
+        return self.move(Direction.LEFT)
+
+    def move_right(self) -> Self:
+        return self.move(Direction.RIGHT)
 
     def move_single_cell(
         self, location: CellPosition, direction: Direction
@@ -264,7 +282,7 @@ class Board:
         adjacent_location = CellPosition(x=location.x + delta.x, y=location.y + delta.y)
         current_exist = self._cell_exists(location)
         target_exists = self._cell_exists(adjacent_location)
-        if not ( current_exist and target_exists):
+        if not (current_exist and target_exists):
             # If we cant move the cell or the cell to which we want to move doenst exist
             # then we can just pass.
             return MoveStatus.NO_OP
@@ -287,12 +305,36 @@ class Board:
         return MoveStatus.NO_OP
 
     def __getitem__(self, location: CellPosition) -> PowerOfTwo:
+        """Convenience method to get the value in the board.
+
+        Args:
+            location: x,y tuple.
+
+        Returns:
+            PowerOfTwo at the location.
+        """
         return self.cells[location.x][location.y]
 
     def __setitem__(self, location: CellPosition, value: PowerOfTwo) -> None:
+        """Convenience method to set a specific cell value.
+
+        Args:
+            location: x,y tuple.
+            value: PowerOfTwo
+        """
+
         self.cells[location.x][location.y] = value
 
     def _cell_exists(self, position: CellPosition) -> bool:
+        """Checks if the cell exists or if its out of bound.
+
+        Args:
+            position: cell to check.
+
+        Returns:
+            True if it exists.
+        """
+
         valid_x = position.x >= 0 and position.x < self._cfg.size.height
         valid_y = position.y >= 0 and position.y < self._cfg.size.width
         return valid_x and valid_y
