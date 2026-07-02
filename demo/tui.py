@@ -23,10 +23,11 @@ class Cell(Container):
         self.display_str = display_str
 
     def compose(self) -> ComposeResult:
-        with Container(classes="Cell"):
-            yield Digits(self.display_str)
+        yield Digits(self.display_str)
 
     def on_mount(self) -> None:
+        self.add_class("Cell")
+
         # Adding the dynamic color.
         if self.value >= board.PowerOfTwo(0):
             value = min(self.value, board.PowerOfTwo(11))
@@ -36,9 +37,13 @@ class Cell(Container):
 class BoardApp(App):
     CSS = """
     Screen { align: center middle;}
-    Grid { align: center middle; layout: grid; grid-size: 4 4; height: 95%; padding: 2; }
-    Digits { width: auto; color: black; }
-    .Cell { border: solid black;  }
+    Grid { layout: grid; grid-size: 4 4; height: 95%; padding: 2; }
+    Digits { width: 100%; height: 100%;}
+    .Cell {
+        border: solid black; content-align: center middle;
+        width: 100%;
+        height: 100%;
+    }
 
     /* Hardcoded values for the colors cause artistiiiiiic */
     .val-0  { background: #eceff1; color: #607d8b; }
