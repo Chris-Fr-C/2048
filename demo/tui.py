@@ -7,7 +7,6 @@ from textual.containers import Grid, Container
 from textual.binding import Binding
 
 
-
 class Cell(Container):
     """Represents a specific cell of the table"""
 
@@ -33,18 +32,40 @@ class Cell(Container):
 
 class BoardApp(App):
     CSS = """
-    Screen { align: center middle;}
-    Grid { layout: grid; grid-size: 4 4; height: 95%; padding: 0; }
-    Digits { width: 100%; height: 100%;}
-    .Cell {
-        border: solid black; content-align: center middle;
-        padding: 0;
-        margin: 0;
+    Screen {
+        align: center middle;
+    }
+
+    Grid {
+        layout: grid;
+        grid-size: 4 4;
+
+        grid-columns: 10 10 10 10;
+        grid-rows: 5 5 5 5;
+
+        width: auto;
+        height: auto;
+        border: heavy gray;
+        background: #bbada0; /* Completely stole the color from the original website */
+    }
+
+    Digits {
         width: 100%;
         height: 100%;
     }
-    Message { width: 100%; height: 100%; align: center middle;}
- 
+
+    .Cell {
+        content-align: center middle;
+        padding: 0;
+        margin: 0;
+    }
+
+    Message {
+        width: 100%;
+        height: 100%;
+        align: center middle;
+    }
+
     /* Hardcoded values for the colors cause artistiiiiiic */
     .val-0  { background: #eceff1; color: #607d8b; }
     .val-1  { background: #e8f5e9; color: #2e7d32; }
@@ -94,19 +115,18 @@ class BoardApp(App):
         with self.base_grid:
             yield from self.show_grid()
 
-        with Container():
-            yield Footer()
+        yield Footer()
 
     def refresh_board(self) -> None:
         grid = self.base_grid
         state = self.GAME.state
-        grid.query().remove() # Who is here for performances anyway.
+        grid.query().remove()  # Who is here for performances anyway.
 
         if state == board.GameState.DEFEAT:
             self.base_grid.remove_class("Board").add_class("Message")
             self.base_grid.mount(Label("You lost :'( Press r to restart)"))
             return
-        elif state == board.GameState.VICTORY: 
+        elif state == board.GameState.VICTORY:
             self.base_grid.remove_class("Board").add_class("Message")
             self.base_grid.mount(Label("You won :D Press r to restart)"))
             return
@@ -133,7 +153,6 @@ class BoardApp(App):
     def action_restart(self) -> None:
         self.GAME = board.Board()
         self.refresh_board()
-    
 
 
 if __name__ == "__main__":
