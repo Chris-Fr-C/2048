@@ -82,6 +82,25 @@ def test_board_move_down():
     ]
 
 
+
+def test_illegal_move():
+    cfg = board.BoardConfig(
+        size=board.BoardDimensions(board.Height(4), board.Width(4)),
+    )
+    brd = board.Board(
+        cfg,
+        [
+            [_2, _0, _0, _0],
+            [_0, _0, _0, _0],
+            [_2, _0, _0, _0],
+            [_0, _0, _0, _0],
+        ],
+    )
+    with pytest.raises(board.IllegalMoveException):
+        brd.move_left()
+
+
+
 @pytest.mark.parametrize(
     "cells,expected_state",
     [

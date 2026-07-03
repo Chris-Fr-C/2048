@@ -1,7 +1,6 @@
-import demo.board as board
+import demo.tui as tui 
 
-if __name__=="__main__":
-    cfg = board.BoardConfig()
-    brd = board.Board(cfg)
-    print(brd)
+if __name__ == "__main__":
+    app = tui.BoardApp()
+    app.run()
 

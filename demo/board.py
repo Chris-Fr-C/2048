@@ -1,7 +1,6 @@
-from typing import ClassVar, Literal, NamedTuple, NewType, Self
 import random
-from enum import Enum, auto
-
+from enum import Enum, auto, StrEnum
+from typing import Literal, NamedTuple, NewType, Self, Counter
 
 # I define strong types just so we have the linter that
 # helps us catch any mistakes that would come from mixing those two
@@ -32,11 +31,12 @@ class GameState(Enum):
     DEFEAT = auto()
 
 
-class Direction(Enum):
-    LEFT = auto()
-    RIGHT = auto()
-    UP = auto()
-    DOWN = auto()
+class Direction(StrEnum):
+    # This one is a str enum because we will be using it with the suggestion tool.
+    LEFT = "left"
+    RIGHT = "right"
+    UP = "up"
+    DOWN = "down"
 
 
 class CellPosition(NamedTuple):
@@ -63,6 +63,10 @@ class BoardConfig(NamedTuple):
     """What we print when there is no value (ie: PowerOfTwo(0))"""
 
 
+class IllegalMoveException(Exception):
+    pass
+
+
 class MoveStatus(Enum):
     """This enum indicates the result when we ask one cell to perform a move operation."""
 
@@ -72,6 +76,8 @@ class MoveStatus(Enum):
     """If adjacent cell has the same power of two, we merge."""
     MOVE_TO_EMPTY_ADJACENT = auto()
     """If current cell can move to the adjacent cell because that cell is empty."""
+    LINE_PADDED = auto()
+    """If the align operation acted on a row or a column."""
 
 
 MAX_ITER = 100_000
@@ -114,6 +120,10 @@ class Board:
             self.cells = override_cells
         else:
             self._init_board()
+
+    def reset(self) -> None:
+        """Resets the board. Here mostly because the terminal ui framework uses class var."""
+        self._init_board()
 
     def _random_cell(self) -> CellPosition:
         """Retursn a random position on the board.
@@ -184,26 +194,31 @@ class Board:
 
     def align_horizontally(
         self, how: Literal[Direction.LEFT] | Literal[Direction.RIGHT]
-    ) -> None:
+    ) -> Counter[MoveStatus]:
+        counter: Counter[MoveStatus] = Counter()
         for row_i in range(self._cfg.size.height):
             # if we align on the left, then spaces are on the right.
-            non_zero = [x for x in self.cells[row_i] if x > PowerOfTwo(0)]
+            old_col = [x for x in self.cells[row_i]]
+            non_zero = [x for x in old_col if x > PowerOfTwo(0)]
             delta_entries = self._cfg.size.width - len(non_zero)
             left_pad = [PowerOfTwo(0)] * delta_entries * (how == Direction.RIGHT)
             right_pad = [PowerOfTwo(0)] * delta_entries * (how == Direction.LEFT)
             new_col = left_pad + non_zero + right_pad
+            counter[MoveStatus.LINE_PADDED] += new_col != old_col
             self.cells[row_i] = new_col
+        return counter
 
     def align_vertically(
         self, how: Literal[Direction.UP] | Literal[Direction.DOWN]
-    ) -> None:
+    ) -> Counter[MoveStatus]:
+        counter: Counter[MoveStatus] = Counter()
         for col_i in range(self._cfg.size.width):
-            non_zero: list[PowerOfTwo] = []
+            old_col: list[PowerOfTwo] = []
             # We fetch non zero values in column, then we pad.
             for row_i in range(self._cfg.size.height):
                 # count
-                if self[CellPosition(row_i, col_i)] > PowerOfTwo(0):
-                    non_zero.append(self[CellPosition(row_i, col_i)])
+                old_col.append(self[CellPosition(row_i, col_i)])
+            non_zero = [x for x in old_col if x > PowerOfTwo(0)]
             # we reset to 0 first
             delta_entries = self._cfg.size.height - len(non_zero)
             # If we align on top, then spaced are on the bottom.
@@ -214,18 +229,29 @@ class Board:
             for row_i in range(self._cfg.size.height):
                 self[CellPosition(row_i, col_i)] = new_col[row_i]
 
-    def align(self, direction: Direction) -> Self:
-        if direction in {Direction.UP, Direction.DOWN}:
-            self.align_vertically(direction)
+            counter[MoveStatus.LINE_PADDED] += old_col != new_col
+
+        return counter
+
+    def align(self, direction: Direction) -> Counter[MoveStatus]:
+        """
+        Tries to pad into a specific direction.
+
+        Args:
+            direction: Where to align to.
+        Returns:
+            A counter that can be used to know if a move was illegal.
+        """
+        if direction == Direction.UP or direction == Direction.DOWN:
+            return self.align_vertically(direction)
         else:
-            self.align_horizontally(direction)
-        return self
+            return self.align_horizontally(direction)
 
     def move(self, direction: Direction) -> Self:
         """Moves the whole board towards a specific direction.
 
         Args:
-            direction: Direction of the board. Direction relative to screen, 
+            direction: Direction of the board. Direction relative to screen,
             not to the internal axis.
         Returns:
             Fluent setter. In place mutation.
@@ -235,16 +261,23 @@ class Board:
         # The order in which we iterate is important for
         # the game rules. But we can simplify that by just aligning twice.
 
-        self.align(direction)
-
+        counter: Counter[MoveStatus] = Counter()
+        counter += self.align(direction)
         for x in range(self._cfg.size.height):
             for y in range(self._cfg.size.width):
                 pos = CellPosition(x, y)
-                self.move_single_cell(pos, direction=direction)
+                status = self.move_single_cell(pos, direction=direction)
+                counter[status] += 1
+        if (
+            counter[MoveStatus.MERGE]
+            + counter[MoveStatus.MOVE_TO_EMPTY_ADJACENT]
+            + counter[MoveStatus.LINE_PADDED]
+        ) == 0:
+            raise IllegalMoveException()
 
         # we have to align twice to be sure that we do not end up with
         # remaining spaces after merge operations
-        self.align(direction)
+        counter += self.align(direction)
         return self
 
     def move_down(self) -> Self:
@@ -358,10 +391,12 @@ class Board:
                 cfg=self._cfg,
                 override_cells=[[col for col in row] for row in self.cells],
             )
-            board_copy.move(direction)
-            if board_copy.cells != self.cells:
+            try:
+                board_copy.move(direction)
                 any_legal_move_left = True
                 break
+            except IllegalMoveException:
+                pass
 
         if not any_legal_move_left:
             return GameState.DEFEAT
@@ -376,7 +411,7 @@ class Board:
             Fluent setter.
         """
         # we find all empty spots first
-        empty : list[CellPosition] = []
+        empty: list[CellPosition] = []
         for row_i, row in enumerate(self.cells):
             for col_i, col in enumerate(row):
                 if col <= PowerOfTwo(0):
@@ -384,6 +419,5 @@ class Board:
 
         picked = random.choices(empty, k=min(self._cfg.amount_new_per_tick, len(empty)))
         for pick in picked:
-            self[pick]=PowerOfTwo(1)
+            self[pick] = PowerOfTwo(1)
         return self
-

@@ -1,10 +1,78 @@
 """This module will provide a minimalistic user interface."""
 
-import demo.board as board
 from textual.app import App, ComposeResult
-from textual.widgets import Digits, Placeholder, Footer, Label, Button
-from textual.containers import Grid, Container
 from textual.binding import Binding
+from textual.containers import Container, Grid
+from textual.screen import ModalScreen
+from textual.widgets import Digits, Footer, Label, Log
+import demo.ai as ai
+import demo.board as board
+from typing import Callable, ClassVar, cast
+from threading import Thread
+import sys
+
+
+class PopOver(ModalScreen):
+    """General popover class to use for modal messages."""
+    BINDINGS = [
+        Binding(key="escape,space,q", action="close", description="Close Overlay")
+    ]
+
+    def __init__(
+        self, message: str, callback: Callable[[], None] = lambda: None, **kwargs
+    ):
+        super().__init__(**kwargs)
+        self.message = message
+        self.callback = callback
+
+    def compose(self) -> ComposeResult:
+        # A container centered via CSS holding the message box
+        with Container(id="PopOver-Content"):
+            yield Label(self.message, id="PopOver-Text")
+            yield Footer()
+
+    def action_close(self) -> None:
+        self.dismiss()
+        self.callback()
+
+class AiPopover(ModalScreen):
+    """General popover class to use for modal messages."""
+    BINDINGS = [
+        Binding(key="escape,space,q", action="close", description="Close Overlay")
+    ]
+
+    AI: ClassVar[ai.AIHelper] = ai.LLMImplementation()
+    state: board.Board
+
+    def __init__(
+        self,  state: board.Board, **kwargs
+    ):
+        super().__init__(**kwargs)
+        self.state=state
+
+    def compose(self) -> ComposeResult:
+        # A container centered via CSS holding the message box
+        log = Log(id="PopOver-Text")
+        with Container(id="PopOver-Content"):
+            yield log
+            yield Footer()
+        
+    def on_mount(self)->None:
+        log: Log = cast(Log, self.query_one("#PopOver-Text"))
+        def target():
+            res = self.AI.help(self.state)
+            log.write_line(f"AI recommendation: {res}")
+
+        log.write_line("Ai help requested. Starting daemon.")
+        thread = Thread(target=target, daemon=True)
+        thread.start()
+
+
+    def action_close(self) -> None:
+        self.dismiss()
+
+
+
 
 
 class Cell(Container):
@@ -34,6 +102,25 @@ class BoardApp(App):
     CSS = """
     Screen {
         align: center middle;
+    }
+    PopOver {
+        align: center middle;
+        background: rgba(0, 0, 0, 0.6);
+    }
+    #PopOver-Content {
+        width: 40;
+        height: auto;
+        background: #34495e;
+        border: heavy #2c3e50;
+        padding: 2 4;
+        align: center middle;
+    }
+
+    #PopOver-Text {
+        text-align: center;
+        width: 100%;
+        color: #ecf0f1;
+        margin-bottom: 1;
     }
 
     Grid {
@@ -80,7 +167,7 @@ class BoardApp(App):
     .val-10 { background: #ff1744; color: #ffffff; }
     .val-11 { background: #d50000; color: #ffffff; }
     """
-    GAME = board.Board(board.BoardConfig(placeholder=" "))
+    GAME: ClassVar[board.Board] = board.Board(board.BoardConfig(placeholder=" "))
     BINDINGS = [
         Binding(key="q", action="quit", description="Quit the app"),
         Binding(key="r", action="restart", description="Restart"),
@@ -124,35 +211,48 @@ class BoardApp(App):
 
         if state == board.GameState.DEFEAT:
             self.base_grid.remove_class("Board").add_class("Message")
-            self.base_grid.mount(Label("You lost :'( Press r to restart)"))
+            self.push_screen(
+                PopOver(message="You lost :'(", callback=lambda: self.action_restart())
+            )
             return
         elif state == board.GameState.VICTORY:
             self.base_grid.remove_class("Board").add_class("Message")
-            self.base_grid.mount(Label("You won :D Press r to restart)"))
+
+            self.push_screen(
+                PopOver("You won :D", callback=lambda: self.action_restart())
+            )
             return
 
         self.base_grid.remove_class("Message").add_class("Board")
         grid.mount(*self.show_grid())
 
+
+    def _move(self, direction: board.Direction)->None:
+        try:
+            self.GAME.move(direction).fill_new()
+            self.refresh_board()
+        except board.IllegalMoveException:
+            pass
+
     def action_left(self) -> None:
-        self.GAME.move_left().fill_new()
-        self.refresh_board()
+        self._move(board.Direction.LEFT)
 
     def action_right(self) -> None:
-        self.GAME.move_right().fill_new()
-        self.refresh_board()
+        self._move(board.Direction.RIGHT)
 
     def action_up(self) -> None:
-        self.GAME.move_up().fill_new()
-        self.refresh_board()
+        self._move(board.Direction.UP)
 
     def action_down(self) -> None:
-        self.GAME.move_down().fill_new()
-        self.refresh_board()
+        self._move(board.Direction.DOWN)
 
     def action_restart(self) -> None:
-        self.GAME = board.Board()
+        self.GAME.reset()
         self.refresh_board()
+
+    def action_help(self) -> None:
+        # This part takes quite a while so we will make it run on a separate thread.
+        self.push_screen(AiPopover(self.GAME))
 
 
 if __name__ == "__main__":
