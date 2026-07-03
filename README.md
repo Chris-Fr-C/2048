@@ -1,3 +1,9 @@
+# Demo
+
+You can visualize a demo here:
+[https://asciinema.org/a/w0k7ExqlMSYGRHr4](https://asciinema.org/a/w0k7ExqlMSYGRHr4)
+
+
 # Usage
 
 Make sure you installed `uv` from the [official website](https://docs.astral.sh/uv/getting-started/installation/).
