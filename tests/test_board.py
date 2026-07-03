@@ -38,20 +38,23 @@ def test_board_align():
         [_2, _0, _0, _0],
     ]
 
-    assert brd.align(board.Direction.UP).cells == [
+    brd.align(board.Direction.UP)
+    assert brd.cells == [
         [_2, _0, _0, _0],
         [_2, _0, _0, _0],
         [_0, _0, _0, _0],
         [_0, _0, _0, _0],
     ]
-    assert brd.align(board.Direction.RIGHT).cells == [
+    brd.align(board.Direction.RIGHT)
+    assert brd.cells == [
         [_0, _0, _0, _2],
         [_0, _0, _0, _2],
         [_0, _0, _0, _0],
         [_0, _0, _0, _0],
     ]
 
-    assert brd.align(board.Direction.LEFT).cells == [
+    brd.align(board.Direction.LEFT)
+    assert brd.cells == [
         [_2, _0, _0, _0],
         [_2, _0, _0, _0],
         [_0, _0, _0, _0],

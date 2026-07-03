@@ -15,6 +15,7 @@ PowerOfTwo = NewType("PowerOfTwo", int)
 This can also simplify if i decide to use pictures, colors, or anything else instead of powers of two."""
 
 Matrix = list[list[PowerOfTwo]]
+"""Represents the 2D array that we use to store the powers of two."""
 
 # Those two are not strong types to avoid having to typehint
 # the Sequence for lists while still being explicit.
@@ -116,6 +117,8 @@ class Board:
         assert self._cfg.size.height > 1
         assert self._cfg.size.width > 1
         assert self._cfg.amount_new_per_tick > 0
+        assert self._cfg.size.height * self._cfg.size.width > self._cfg.amount_initial 
+        assert self._cfg.size.height * self._cfg.size.width > self._cfg.amount_new_per_tick 
         if override_cells:
             self.cells = override_cells
         else:
@@ -159,6 +162,8 @@ class Board:
         ]
         random_locations: set[CellPosition] = set()
         i = 0
+        # This has a conflict possibility, but highly unprobable at the begining.
+        # There is an alternate implementation with the random.choice but leaving it here as an example.
         while len(random_locations) < self._cfg.amount_initial:
             i += 1
             assert i < MAX_ITER
@@ -243,6 +248,7 @@ class Board:
             A counter that can be used to know if a move was illegal.
         """
         if direction == Direction.UP or direction == Direction.DOWN:
+            # Not using a match to avoid deep nesting for no reason.
             return self.align_vertically(direction)
         else:
             return self.align_horizontally(direction)

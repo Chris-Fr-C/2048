@@ -1,3 +1,12 @@
+# Usage
+
+Make sure you installed `uv` from the [official website](https://docs.astral.sh/uv/getting-started/installation/).
+Make should also be available on any UNIX system.
+
+Some commands are available such as make, make tests, make setup.
+You also need [ollama](https://ollama.com/) for the AI features.
+
+This project was tested on linux only.
 
 
 # General remark
@@ -35,3 +44,26 @@ and not:
 4 . .
 ```
 
+
+
+## How I decide if the game is over
+If the  user cannot make any legal move, it's considered as over.
+
+A legal move is considered as a move that would change the state of the board.
+
+## Why using a TUI instead of a web ui
+
+It's not common so I wanted to do it.
+Note that not much effort was put into the ui since it uses a framework (textual) and some of the decisions are related to its limitation.
+
+
+## why that strategy for the LLM ai mode
+
+Using a structured output is quite convenient to get the next instruction.
+
+However I think that a normal "AI" that would not use an LLM would be more efficient, but this is just to try it out.
+
+
+## Improvements
+
+The UI is still not super ergonomic, in particular for the AI suggestion. I could add a timebar, a better popup etc ...
